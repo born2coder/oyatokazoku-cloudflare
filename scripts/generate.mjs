@@ -111,7 +111,7 @@ const sitemap = manifest.map((page) => `  <url><loc>${origin}${page.path}</loc><
 fs.writeFileSync(path.join(output, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemap}\n</urlset>\n`);
 fs.writeFileSync(path.join(output, 'robots.txt'), `User-agent: *\nAllow: /\n\nSitemap: ${origin}/sitemap.xml\n`);
 fs.writeFileSync(path.join(output, '_headers'), `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n`);
-fs.writeFileSync(path.join(output, '_redirects'), `/index.php / 301\n/home/ / 301\n/wp-admin/* / 404\n/wp-login.php / 404\n/2026/08/04/hello-world/feed/ / 410\n`);
+fs.writeFileSync(path.join(output, '_redirects'), `/index.php / 301\n/home/ / 301\n`);
 fs.writeFileSync(path.join(output, '404.html'), `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ページが見つかりません｜${siteName}</title><link rel="stylesheet" href="/assets/site.css"></head><body><main class="not-found"><p class="code">404</p><h1>ページが見つかりません</h1><p>URLが変わったか、ページが存在しない可能性があります。</p><a href="/">サイトTOPへ戻る</a></main></body></html>`);
 fs.writeFileSync(path.join(root, 'page-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 console.log(`Built ${manifest.length} pages.`);
