@@ -1,0 +1,10 @@
+{
+  "name": "oyatokazoku-cloudflare",
+  "compatibility_date": "2026-09-08",
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "force-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "observability": { "enabled": true, "head_sampling_rate": 1 }
+}
