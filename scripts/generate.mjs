@@ -39,6 +39,13 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 }
 
+function wrapArticleTables(content) {
+  // Accept the wrappers in the older articles as well as bare tables.
+  const tables = /<div class="(?:table-scroll|oy-tablewrap|care-table-wrap)"\s*>\s*(<table\b[^>]*>[\s\S]*?<\/table>)\s*<\/div>|(<table\b[^>]*>[\s\S]*?<\/table>)/gi;
+  return content.replace(tables, (_, wrapped, bare) =>
+    `<div class="table-scroll" role="region" aria-label="表の表示領域" tabindex="0">${wrapped || bare}</div>`);
+}
+
 function cleanArticleBody(page) {
   let content = page.post_content
     .replace(/<!--\s*\/?wp:[\s\S]*?-->/g, '')
@@ -65,7 +72,8 @@ function cleanArticleBody(page) {
     );
   }
   // One shared title and breadcrumb; original article sections retain their anchors.
-  return content.replace(/<!--[^]*?-->/g, '').replace(/<h1\b[^>]*>[^]*?<\/h1>/i, '').trim();
+  const article = content.replace(/<!--[^]*?-->/g, '').replace(/<h1\b[^>]*>[^]*?<\/h1>/i, '').trim();
+  return wrapArticleTables(article);
 }
 
 function cleanContent(page) {
