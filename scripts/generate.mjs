@@ -1,13 +1,25 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 
 const root = process.cwd();
 const pages = JSON.parse(fs.readFileSync(path.join(root, 'content', 'pages.json'), 'utf8'));
 const actions = JSON.parse(fs.readFileSync(path.join(root, 'content/actions.json'), 'utf8'));
+const searchTopics = JSON.parse(fs.readFileSync(path.join(root, 'content/search-topics.json'), 'utf8'));
 const output = path.join(root, 'dist');
 const origin = 'https://oyatokazoku.com';
 const siteName = '親のこと、家族のこと。';
 const byId = new Map(pages.map((page) => [Number(page.ID), page]));
+const staticDir = path.join(root, 'static');
+
+function version(...values) {
+  const hash = createHash('sha256');
+  for (const value of values) hash.update(value);
+  return hash.digest('hex').slice(0, 12);
+}
+
+const cssVersion = version(fs.readFileSync(path.join(staticDir, 'site.css')));
+const scriptVersion = version(fs.readFileSync(path.join(staticDir, 'site.js')));
 
 function pagePath(page) {
   if (Number(page.ID) === 8 || page.post_name === 'home') return '/';
@@ -27,7 +39,7 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 }
 
-function cleanContent(page) {
+function cleanArticleBody(page) {
   let content = page.post_content
     .replace(/<!--\s*\/?wp:[\s\S]*?-->/g, '')
     .replace(/<header class="(?:ec-head|fh-head|oy-head|oy-header|oy-shared-head|pc-head)">[\s\S]*?<\/header>/gi, '')
@@ -52,16 +64,22 @@ function cleanContent(page) {
       '<div class="oy-label">サイトの考え方</div>',
     );
   }
-  content = content.replace(/<!--[^]*?-->/g, '');
   // One shared title and breadcrumb; original article sections retain their anchors.
-  content = content.replace(/<h1\b[^>]*>[^]*?<\/h1>/i, '');
+  return content.replace(/<!--[^]*?-->/g, '').replace(/<h1\b[^>]*>[^]*?<\/h1>/i, '').trim();
+}
+
+function cleanContent(page) {
+  const content = cleanArticleBody(page);
   const action = actions[page.ID];
   const title = `<h1>${escapeHtml(Number(page.ID) === 8 ? siteName : page.post_title)}</h1>`;
   const parent = byId.get(Number(page.post_parent));
   const crumb = Number(page.ID) === 8 ? '' : `<nav class="breadcrumb" aria-label="パンくず"><a href="/">ホーム</a>${parent ? ` / <a href="${pagePath(parent)}">${escapeHtml(parent.post_title)}</a>` : ''} / <span>${escapeHtml(page.post_title)}</span></nav>`;
-  const first = action ? `<section class="first-step" aria-labelledby="first-step-title"><p class="eyebrow">ここから始めて大丈夫です</p><h2 id="first-step-title">まず、今日すること</h2><p>${escapeHtml(action[0])}</p><h3>そのまま使える、相談の言葉</h3><blockquote>${escapeHtml(action[1])}</blockquote><h3>話が進まないときは</h3><p>${escapeHtml(action[2])}</p><a href="/tools/?topic=${encodeURIComponent(page.post_title)}&question=${encodeURIComponent(action[1])}#questions">この質問を相談メモに入れる →</a></section>` : '';
-  const edited = `<p class="editorial-date">内容・導線の更新：2026年10月28日。制度の確認日は該当箇所に記載しています。</p>`;
-  return `${crumb}${title}${first}<div class="article-body">${content.trim()}</div>${edited}`;
+  const lead = page.intro ? `<p class="scene-lead">${escapeHtml(page.intro)}</p>` : '';
+  const first = action ? `<section class="first-step" aria-labelledby="first-step-title"><h2 id="first-step-title">まず、今日すること</h2><p>${escapeHtml(action[0])}</p><h3>相談するときは</h3><blockquote>${escapeHtml(action[1])}</blockquote><h3>話が進まないときは</h3><p>${escapeHtml(action[2])}</p><a href="/tools/?topic=${encodeURIComponent(page.post_title)}&question=${encodeURIComponent(action[1])}#questions">この質問を相談メモに入れる →</a></section>` : '';
+  const jumps = page.jumps?.length ? `<nav class="guide-jumps" aria-label="このページの案内">${page.jumps.map(([id, label]) => `<a href="#${escapeHtml(id)}">${escapeHtml(label)} ↓</a>`).join('')}</nav>` : '';
+  const [year, month, day] = page.post_modified.slice(0, 10).split('-').map(Number);
+  const edited = `<p class="editorial-date">記事の更新日：${year}年${month}月${day}日。制度の確認日は該当箇所に記載しています。</p>`;
+  return `${crumb}${title}${lead}${jumps}${first}<div class="article-body">${content}</div>${edited}`;
 }
 
 function plainText(value) {
@@ -76,9 +94,29 @@ function description(page, content) {
   if (pagePath(page) === '/') {
     return '親の入院、介護、葬儀、相続、遺品整理、実家じまい。家族が困ったときに、次に確認することを順番に整理した実用ガイドです。';
   }
-  const text = actions[page.ID] ? `${page.post_title}。${actions[page.ID][0]} ${actions[page.ID][2]}` : plainText(content);
+  const text = page.summary || (actions[page.ID] ? `${page.post_title}。${actions[page.ID][0]} ${actions[page.ID][2]}` : plainText(content));
   return text.length > 150 ? `${text.slice(0, 149).replace(/[、。\s]+$/u, '')}…` : text;
 }
+
+// Topic entries let a reader land on the section that answers a specific question.
+// Article entries also index the body so terms outside the curated topics are searchable.
+const searchEntries = [
+  ...searchTopics,
+  ...pages.filter(page => actions[page.ID]).map(page => {
+    const body = cleanArticleBody(page);
+    const headings = [...body.matchAll(/<h[23]\b[^>]*>([\s\S]*?)<\/h[23]>/gi)]
+      .map(match => plainText(match[1]));
+    return {
+      title: page.post_title,
+      url: pagePath(page),
+      summary: page.summary || actions[page.ID][0],
+      headings,
+      text: plainText(body),
+    };
+  }),
+];
+const searchIndex = JSON.stringify(searchEntries);
+const searchVersion = version(fs.readFileSync(path.join(staticDir, 'guide-search.js')), searchIndex);
 
 function globalHeader(route) {
   const links = [
@@ -132,10 +170,10 @@ function documentFor(page) {
   <meta property="og:url" content="${canonical}">
   <meta name="twitter:card" content="summary">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/assets/site.css?v=20261028-1">
+  <link rel="stylesheet" href="/assets/site.css?v=${cssVersion}">
   <script type="application/ld+json">${schema}</script>
 </head>
-<body><a class="skip-link" href="#main">本文へ進む</a>${globalHeader(route)}<main id="main">${content}</main>${globalFooter()}<script src="/assets/site.js?v=20261028-1" defer></script></body>
+<body><a class="skip-link" href="#main">本文へ進む</a>${globalHeader(route)}<main id="main">${content}</main>${globalFooter()}<script src="/assets/site.js?v=${scriptVersion}" defer></script>${home ? `<script type="module" src="/assets/guide-search.js?v=${searchVersion}"></script>` : ''}</body>
 </html>\n`;
 }
 
@@ -143,6 +181,7 @@ fs.rmSync(output, { recursive: true, force: true });
 fs.mkdirSync(path.join(output, 'assets'), { recursive: true });
 fs.copyFileSync(path.join(root, 'static', 'site.css'), path.join(output, 'assets', 'site.css'));
 fs.copyFileSync(path.join(root, 'static', 'site.js'), path.join(output, 'assets', 'site.js'));
+fs.copyFileSync(path.join(staticDir, 'guide-search.js'), path.join(output, 'assets', 'guide-search.js'));
 fs.copyFileSync(path.join(root, 'static', 'favicon.svg'), path.join(output, 'favicon.svg'));
 
 const manifest = [];
@@ -155,12 +194,12 @@ for (const page of pages) {
   manifest.push({ id: Number(page.ID), path: route, title: page.post_title, modified: page.post_modified });
 }
 
-fs.writeFileSync(path.join(output, 'assets/search.json'), JSON.stringify(pages.filter(p => actions[p.ID]).map(p => ({title:p.post_title, url:pagePath(p), text: actions[p.ID].join(' ')}))));
+fs.writeFileSync(path.join(output, 'assets/search.json'), searchIndex);
 const sitemap = manifest.map((page) => `  <url><loc>${origin}${page.path}</loc><lastmod>${page.modified.slice(0, 10)}</lastmod></url>`).join('\n');
 fs.writeFileSync(path.join(output, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemap}\n</urlset>\n`);
 fs.writeFileSync(path.join(output, 'robots.txt'), `User-agent: *\nAllow: /\n\nSitemap: ${origin}/sitemap.xml\n`);
 fs.writeFileSync(path.join(output, '_headers'), `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n`);
 fs.writeFileSync(path.join(output, '_redirects'), `/index.php / 301\n/home/ / 301\n`);
-fs.writeFileSync(path.join(output, '404.html'), `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ページが見つかりません｜${siteName}</title><link rel="stylesheet" href="/assets/site.css?v=20261028-1"></head><body>${globalHeader('')}<main class="not-found"><p class="code">404</p><h1>ページが見つかりません</h1><p>URLが変わったか、ページが存在しない可能性があります。</p><a href="/">サイトTOPへ戻る</a></main>${globalFooter()}<script src="/assets/site.js?v=20261028-1" defer></script></body></html>`);
+fs.writeFileSync(path.join(output, '404.html'), `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ページが見つかりません｜${siteName}</title><link rel="stylesheet" href="/assets/site.css?v=${cssVersion}"></head><body>${globalHeader('')}<main class="not-found"><p class="code">404</p><h1>ページが見つかりません</h1><p>URLが変わったか、ページが存在しない可能性があります。</p><a href="/">サイトTOPへ戻る</a></main>${globalFooter()}</body></html>`);
 fs.writeFileSync(path.join(root, 'page-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 console.log(`Built ${manifest.length} pages.`);

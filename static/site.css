@@ -2,3 +2,194 @@
 @media(max-width:700px){body{font-size:16px}main{padding:24px 18px 50px}.oy-global-header__inner{display:block;padding:16px 18px}.oy-global-logo{font-size:21px}.oy-global-nav{margin-top:12px;gap:4px 18px;font-size:13px}.first-step{padding:20px 18px}.situation-grid{grid-template-columns:1fr}.category-grid{grid-template-columns:repeat(2,1fr)}h2{font-size:1.35rem}.situation{padding:20px}th,td{padding:9px;font-size:13px}.table-scroll table{min-width:560px}.tool-actions button{width:100%}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 @media print{@page{margin:16mm}body{background:#fff;color:#000;font-size:10pt}main{max-width:none;padding:0}.oy-global-header,.oy-global-footer,.tool-actions,.tool-tabs,.skip-link,.breadcrumb,#guide-search,#search-results{display:none!important}section{break-inside:auto}h2,h3,legend{break-after:avoid}a{color:#000}input:has(+.print-value),textarea:has(+.print-value){display:none!important}.print-value{display:block;white-space:pre-wrap;overflow-wrap:anywhere;min-height:2em;border-bottom:1px solid #aaa}.first-step{break-inside:avoid;padding:12px}fieldset{break-inside:avoid}.table-scroll{overflow:visible}.table-scroll table{min-width:0}table{font-size:9pt}.editorial-date{font-size:8pt}}
+
+.scene-lead {
+  max-width: 44rem;
+  font-size: 1.12rem;
+  margin: -0.4rem 0 1.4rem;
+}
+
+.scene-lead + .first-step,
+.guide-jumps + .first-step {
+  margin-top: 1.4rem;
+  margin-bottom: 1.25rem;
+}
+
+.guide-jumps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.75rem;
+  margin: 1rem 0 1.25rem;
+}
+
+.guide-jumps a {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  padding: 0.3rem 0.6rem;
+}
+
+.call-script {
+  margin: 1.2rem 0;
+  padding: 1rem 1.15rem;
+  border-left: 4px solid var(--green);
+  background: var(--pale);
+  border-radius: 0 6px 6px 0;
+}
+
+.call-script figcaption {
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.call-script blockquote {
+  margin: 0.4rem 0 0;
+}
+
+.call-script blockquote p {
+  margin: 0.3rem 0;
+}
+
+.copy-example {
+  color: var(--green);
+  background: #fff;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.88rem;
+  margin: 0.65rem 0.6rem 0 0;
+}
+
+.copy-status {
+  font-size: 0.88rem;
+}
+
+.scene-case {
+  padding: 0.9rem 1.15rem;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.scene-case > :first-child {
+  margin-top: 0;
+}
+
+.scene-case > :last-child {
+  margin-bottom: 0;
+}
+
+.quick-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 0.6rem;
+  list-style: none;
+  padding: 0;
+}
+
+.quick-links li {
+  margin: 0;
+}
+
+.quick-links a {
+  display: block;
+  height: 100%;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 6px;
+}
+
+.quick-links a:hover {
+  background: var(--pale);
+}
+
+.search-panel {
+  background: var(--pale);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem 1.15rem;
+}
+
+.search-panel label {
+  font-size: 1.15rem;
+  color: var(--navy);
+  margin-top: 0;
+}
+
+.search-panel .search-hint {
+  font-size: 0.9rem;
+  margin: 0.3rem 0 0.6rem;
+}
+
+.search-panel #search-status {
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+#search-results {
+  list-style: none;
+  padding: 0;
+  margin: 0.7rem 0 0;
+}
+
+#search-results:empty {
+  margin: 0;
+}
+
+#search-results li {
+  border-top: 1px solid var(--line);
+  margin: 0;
+  padding: 0.65rem 0;
+}
+
+#search-results a {
+  font-weight: 700;
+  padding: 0;
+}
+
+#search-results p {
+  margin: 0.18rem 0 0;
+  font-size: 0.94rem;
+}
+
+.home-intro + .search-panel {
+  margin-top: 0;
+}
+
+.home-intro {
+  padding-bottom: 0.6rem;
+}
+
+.scene-notice {
+  border-left: 4px solid #9c5a19;
+  background: #fbf1e6;
+  padding: 0.65rem 1rem;
+}
+
+@media (max-width: 700px) {
+  .scene-lead {
+    font-size: 1.05rem;
+  }
+
+  .situation {
+    padding: 0.85rem 1rem;
+  }
+
+  .situation strong {
+    font-size: 1rem;
+  }
+
+  .situation span {
+    margin-top: 0.2rem;
+  }
+}
+
+@media print {
+  .copy-example, .copy-status, .search-panel {
+    display: none !important;
+  }
+
+  .call-script {
+    break-inside: avoid;
+  }
+}

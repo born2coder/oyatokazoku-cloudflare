@@ -51,14 +51,34 @@ for (const required of ['sitemap.xml', 'robots.txt', '_headers', '_redirects', '
   if (!fs.existsSync(path.join(root, required))) errors.push(`missing ${required}`);
 }
 const actions = JSON.parse(fs.readFileSync('content/actions.json', 'utf8'));
-if (Object.keys(actions).length !== 75) errors.push('Expected practical actions for all 75 guides');
+const pages = JSON.parse(fs.readFileSync('page-manifest.json', 'utf8'));
+const guidePaths = /^\/(hospitalization|care|funeral|inheritance|estate-clearance|family-home)\//;
+const guides = pages.filter(page => guidePaths.test(page.path));
+if (Object.keys(actions).length !== guides.length || guides.some(guide => !actions[guide.id])) {
+  errors.push('Expected practical actions for every guide');
+}
 for (const [id, steps] of Object.entries(actions)) {
   if (steps.length !== 3 || steps.some(x => !x.trim())) errors.push(`Incomplete action for ${id}`);
+}
+const search = JSON.parse(fs.readFileSync(path.join(root, 'assets/search.json'), 'utf8'));
+const articleEntries = new Set(search.filter(entry => !entry.keywords).map(entry => entry.url));
+for (const guide of guides) {
+  if (!articleEntries.has(guide.path)) errors.push(`Search is missing ${guide.path}`);
+}
+for (const { url, title, summary } of search) {
+  const targetUrl = new URL(url, 'https://oyatokazoku.com');
+  const target = targetFor(targetUrl.pathname);
+  if (!title.trim() || !summary.trim()) errors.push(`Incomplete search result: ${url}`);
+  if (targetUrl.origin !== 'https://oyatokazoku.com' || !fs.existsSync(target)) {
+    errors.push(`Invalid search result: ${url}`);
+  } else if (targetUrl.hash && !fs.readFileSync(target, 'utf8').includes(`id="${decodeURIComponent(targetUrl.hash.slice(1))}"`)) {
+    errors.push(`Invalid search anchor: ${url}`);
+  }
 }
 const models = ['comparison','chapter-5','chapter-6'].map(x => fs.readFileSync(path.join(root,'family-home',x,'index.html'),'utf8').match(/<section><h2>共通の試算[^]*?<\/section>/)?.[0]);
 if (!models[0] || models.some(x=>x!==models[0])) errors.push('Inconsistent family-home models');
 if (fs.readFileSync(path.join(root,'care/chapter-5/index.html'),'utf8').includes('同じ親で比べる月額モデル')) errors.push('Mixed-scope care comparison remains');
-console.log(JSON.stringify({ pages: htmlFiles.length, internalLinks, errors: errors.length }, null, 2));
+console.log(JSON.stringify({ pages: htmlFiles.length, guides: guides.length, internalLinks, searchEntries: search.length, errors: errors.length }, null, 2));
 if (errors.length) {
   console.error(errors.slice(0, 100).join('\n'));
   process.exitCode = 1;

@@ -35,18 +35,25 @@
     });
     calc();
   }
-  const search=$('guide-search');
-  if(search){
-    let index;
-    const render=()=>{
-      if(!index)return;
-      const q=search.value.trim();const list=$('search-results');list.replaceChildren();
-      if(!q){$('search-status').textContent='';return;}
-      const terms=q.split(/\s+/);const hits=index.filter(x=>terms.every(t=>(x.title+' '+x.text).includes(t)));
-      $('search-status').textContent=hits.length ? `${hits.length}件の記事があります。` : '見つかりませんでした。言葉を短くするか、テーマ一覧から探してください。';
-      for(const x of hits){const li=document.createElement('li'),a=document.createElement('a');a.href=x.url;a.textContent=x.title;li.append(a);list.append(li);}
-    };
-    search.addEventListener('input',render);
-    fetch('/assets/search.json?v=20261028-1').then(r=>{if(!r.ok)throw Error();return r.json();}).then(x=>{index=x;render();}).catch(()=>{$('search-status').textContent='検索を読み込めませんでした。テーマ一覧から探してください。';});
+  if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return;
+  for (const example of document.querySelectorAll('.call-script')) {
+    const quote = example.querySelector('blockquote');
+    if (!quote) continue;
+    const button = document.createElement('button');
+    const status = document.createElement('span');
+    button.type = 'button';
+    button.className = 'copy-example';
+    button.textContent = '文例をコピー';
+    status.className = 'copy-status';
+    status.setAttribute('role', 'status');
+    button.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(quote.innerText.trim());
+        status.textContent = 'コピーしました';
+      } catch {
+        status.textContent = '文例を選択してコピーできます';
+      }
+    });
+    example.append(button, status);
   }
 })();
